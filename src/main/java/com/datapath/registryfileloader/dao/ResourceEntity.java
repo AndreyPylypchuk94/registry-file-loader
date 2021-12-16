@@ -13,4 +13,9 @@ public class ResourceEntity {
     private String datasetTitle;
     private String datasetUrl;
     private boolean downloaded;
+    private String dateCreated;
+    private String dateModified;
+    private String metadataDateModified;
+    private String format;
+    private boolean addDetailsExtracted;
 }

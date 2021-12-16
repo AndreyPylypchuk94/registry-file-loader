@@ -2,6 +2,7 @@ package com.datapath.registryfileloader.service;
 
 import com.datapath.registryfileloader.dao.DaoService;
 import com.datapath.registryfileloader.dao.ResourceEntity;
+import com.datapath.registryfileloader.domain.AddDetails;
 import com.datapath.registryfileloader.domain.Dataset;
 import com.datapath.registryfileloader.domain.Resource;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import static java.lang.String.join;
 import static java.nio.file.Files.copy;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.nonNull;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -31,7 +33,7 @@ public class FileLoadService {
     @Value("${registry.search.url}")
     private String url;
 
-    private final WebConnectionService service;
+    private final WebConnectionService connectionService;
     private final DocumentDataExtractService extractService;
     private final DaoService daoService;
 
@@ -45,7 +47,7 @@ public class FileLoadService {
         do {
             String pageUrl = url + page;
 
-            pageDocument = service.getDocument(pageUrl);
+            pageDocument = connectionService.getDocument(pageUrl);
 
             if (extractService.datasetIsNotPresent(pageDocument)) break;
 
@@ -62,7 +64,7 @@ public class FileLoadService {
 
     private void process(Dataset d) {
         try {
-            Document document = service.getDocument(d.getUrl());
+            Document document = connectionService.getDocument(d.getUrl());
             List<Resource> resources = extractService.extractResources(document);
             resources.forEach(r -> process(r, d));
         } catch (Exception e) {
@@ -94,5 +96,37 @@ public class FileLoadService {
         }
 
         daoService.save(entity);
+    }
+
+    public void update() {
+        updateDate();
+//        extractText();
+    }
+
+    private void updateDate() {
+        log.info("Updating dates started");
+
+        List<ResourceEntity> documents;
+
+        while (!isEmpty(documents = daoService.getWithEmptyDate())) {
+            documents.forEach(d -> {
+                try {
+                    String url = d.getUrl().replaceAll("/download/.+", "");
+                    Document document = connectionService.getDocument(url);
+                    AddDetails addDetails = extractService.extractAddDetails(document);
+                    d.setDateCreated(addDetails.getDateCreated());
+                    d.setDateModified(addDetails.getDateModified());
+                    d.setMetadataDateModified(addDetails.getMetadataDateModified());
+                    d.setFormat(addDetails.getFormat());
+                    daoService.save(d);
+                } catch (Exception e) {
+                    log.warn("Page not fetched", e);
+                }
+                d.setAddDetailsExtracted(true);
+                daoService.save(d);
+            });
+        }
+
+        log.info("Updating dates finished");
     }
 }
