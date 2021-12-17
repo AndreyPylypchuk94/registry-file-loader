@@ -17,5 +17,8 @@ public class ResourceEntity {
     private String dateModified;
     private String metadataDateModified;
     private String format;
+    private String text;
     private boolean addDetailsExtracted;
+    private boolean textExtracted;
+    private boolean textTooLarge;
 }

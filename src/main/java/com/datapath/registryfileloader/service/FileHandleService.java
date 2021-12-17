@@ -5,10 +5,14 @@ import com.datapath.registryfileloader.dao.ResourceEntity;
 import com.datapath.registryfileloader.domain.AddDetails;
 import com.datapath.registryfileloader.domain.Dataset;
 import com.datapath.registryfileloader.domain.Resource;
+import com.datapath.registryfileloader.service.extract.DocumentDataExtractService;
+import com.datapath.registryfileloader.service.extract.FileTextExtractService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.BsonMaximumSizeExceededException;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,7 +30,7 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FileLoadService {
+public class FileHandleService {
 
     private static final String FILES_DIRECTORY = "files";
 
@@ -36,6 +40,9 @@ public class FileLoadService {
     private final WebConnectionService connectionService;
     private final DocumentDataExtractService extractService;
     private final DaoService daoService;
+    private final FileTextExtractService textExtractService;
+
+    private final MongoTemplate template;
 
     public void load() {
         log.info("Started");
@@ -100,7 +107,7 @@ public class FileLoadService {
 
     public void update() {
         updateDate();
-//        extractText();
+        extractText();
     }
 
     private void updateDate() {
@@ -118,7 +125,6 @@ public class FileLoadService {
                     d.setDateModified(addDetails.getDateModified());
                     d.setMetadataDateModified(addDetails.getMetadataDateModified());
                     d.setFormat(addDetails.getFormat());
-                    daoService.save(d);
                 } catch (Exception e) {
                     log.warn("Page not fetched", e);
                 }
@@ -128,5 +134,35 @@ public class FileLoadService {
         }
 
         log.info("Updating dates finished");
+    }
+
+    private void extractText() {
+        log.info("Extracting text started");
+
+        List<ResourceEntity> documents;
+
+        while (!isEmpty(documents = daoService.getWithEmptyText())) {
+            documents.forEach(d -> {
+                log.info("Extracting in {}", d.getId());
+                try {
+                    d.setText(textExtractService.extract(d));
+                } catch (Exception e) {
+                    log.warn("Text not extracted. Id {}", d.getId());
+                    log.warn("Reason:", e);
+                }
+
+                d.setTextExtracted(true);
+
+                try {
+                    daoService.save(d);
+                } catch (BsonMaximumSizeExceededException e) {
+                    d.setTextTooLarge(true);
+                    d.setText(null);
+                    daoService.save(d);
+                }
+            });
+        }
+
+        log.info("Extracting text finished");
     }
 }

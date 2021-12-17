@@ -1,6 +1,6 @@
 package com.datapath.registryfileloader;
 
-import com.datapath.registryfileloader.service.FileLoadService;
+import com.datapath.registryfileloader.service.FileHandleService;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,7 +16,7 @@ public class RegistryFileLoaderApplication {
         SpringApplication.run(RegistryFileLoaderApplication.class, args);
     }
 
-    private final FileLoadService service;
+    private final FileHandleService service;
 
     //    @Scheduled()
     private void load() {

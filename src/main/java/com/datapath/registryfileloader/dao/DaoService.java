@@ -25,6 +25,13 @@ public class DaoService {
                     where("addDetailsExtracted").is(false)
             )).limit(100);
 
+    private static final Query NOT_EXTRACTED_TEXT_QUERY = new Query(
+            new Criteria().orOperator(
+                    where("textExtracted").exists(false),
+                    where("textExtracted").isNull(),
+                    where("textExtracted").is(false)
+            )).limit(100);
+
     private final MongoTemplate template;
     private final ObjectMapper mapper;
 
@@ -39,5 +46,9 @@ public class DaoService {
 
     public List<ResourceEntity> getWithEmptyDate() {
         return template.find(NOT_DATE_PROCESSED_QUERY, ResourceEntity.class, COLLECTION_NAME);
+    }
+
+    public List<ResourceEntity> getWithEmptyText() {
+        return template.find(NOT_EXTRACTED_TEXT_QUERY, ResourceEntity.class, COLLECTION_NAME);
     }
 }
