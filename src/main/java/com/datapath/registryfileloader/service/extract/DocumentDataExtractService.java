@@ -28,7 +28,7 @@ public class DocumentDataExtractService {
 
     private final static String DATASET_LIST_SELECTOR = "#all-results > div.search-container__item";
     private final static String DATASET_URL_SELECTOR = "h4 > a";
-    private final static String DATASET_TITLE_SELECTOR = "p.search-container__item-description";
+    private final static String DATASET_MANAGER_SELECTOR = "p.search-container__item-description";
 
     private final static String RESOURCE_LIST_SELECTOR = "li.resource-list__item";
     private final static String RESOURCE_TITLE_SELECTOR = "div.resource-list__item-container-title a";
@@ -38,6 +38,8 @@ public class DocumentDataExtractService {
     private final static String DATE_MODIFIED_SELECTOR = ".additional-info-container__item .dataset-label:matches(Востаннє оновлено) + .dataset-details";
     private final static String METADATA_DATE_MODIFIED_SELECTOR = ".additional-info-container__item .dataset-label:matches(Мета-дані востаннє оновлено) + .dataset-details";
     private final static String FORMAT_SELECTOR = ".additional-info-container__item .dataset-label:matches(Формат) + .dataset-details";
+
+    private final static String DATASET_TITLE_SELECTOR = ".inside-accordion > section:first-of-type h2.module-heading";
 
     private final static List<DateTimeFormatter> DATE_CREATED_FORMATS = List.of(
             ofPattern("MMM dd, yyyy", forLanguageTag("uk-UA")),
@@ -77,13 +79,15 @@ public class DocumentDataExtractService {
                 .stream()
                 .map(e -> new Dataset(
                         e.select(DATASET_URL_SELECTOR).attr("abs:href"),
-                        e.select(DATASET_TITLE_SELECTOR).text()
+                        e.select(DATASET_MANAGER_SELECTOR).text()
                 )).collect(toList());
     }
 
     public List<Resource> extractResources(Document document) {
+        String datasetTitle = document.select(DATASET_TITLE_SELECTOR).text();
         return document.select(RESOURCE_LIST_SELECTOR).stream()
                 .map(r -> new Resource(
+                        datasetTitle,
                         r.select(RESOURCE_TITLE_SELECTOR).attr("title"),
                         r.select(RESOURCE_URL_SELECTOR).attr("abs:href"),
                         r.attr("data-id")
@@ -134,5 +138,9 @@ public class DocumentDataExtractService {
         }
 
         return result;
+    }
+
+    public String extractDatasetTitle(Document document) {
+        return document.select(DATASET_TITLE_SELECTOR).text();
     }
 }

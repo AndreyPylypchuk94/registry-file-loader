@@ -11,6 +11,7 @@ public class ResourceEntity {
     private String url;
     private String filePath;
     private String datasetTitle;
+    private String datasetManager;
     private String datasetUrl;
     private boolean downloaded;
     private String dateCreated;

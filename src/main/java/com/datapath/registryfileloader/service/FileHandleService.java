@@ -19,11 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.join;
 import static java.nio.file.Files.copy;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -87,7 +90,8 @@ public class FileHandleService {
         entity.setId(r.getDataId());
         entity.setTitle(r.getTitle());
         entity.setUrl(r.getUrl());
-        entity.setDatasetTitle(d.getTitle());
+        entity.setDatasetTitle(r.getDatasetTitle());
+        entity.setDatasetManager(d.getManager());
         entity.setDatasetUrl(d.getUrl());
 
         try {
@@ -106,8 +110,40 @@ public class FileHandleService {
     }
 
     public void update() {
-        updateDate();
-        extractText();
+//        updateDate();
+//        extractText();
+        updateTitle();
+    }
+
+    private void updateTitle() {
+        log.info("Updating titles started");
+
+        Map<String, String> datasetTitles = new HashMap<>();
+
+        List<ResourceEntity> documents;
+
+        while (!isEmpty(documents = daoService.getWithEmptyDate())) {
+            documents.forEach(d -> {
+                try {
+                    d.setDatasetManager(d.getDatasetTitle());
+
+                    String datasetTitle = datasetTitles.get(d.getDatasetUrl());
+                    if (isNull(datasetTitle)) {
+                        Document document = connectionService.getDocument(d.getDatasetUrl());
+                        datasetTitle = extractService.extractDatasetTitle(document);
+                        datasetTitles.put(d.getDatasetUrl(), datasetTitle);
+                    }
+
+                    d.setDatasetTitle(datasetTitle);
+                } catch (Exception e) {
+                    log.warn("Page not fetched", e);
+                }
+                d.setAddDetailsExtracted(true);
+                daoService.save(d);
+            });
+        }
+
+        log.info("Updating titles finished");
     }
 
     private void updateDate() {
